@@ -18,7 +18,7 @@ run:
 gstart:
 	git add *
 	git commit -m "${m}"
-gpush:
+push:
 	git push origin master
 pull:
 	git pull

@@ -1,3 +1,82 @@
-# Assembler-TicTacToe
-David Was Here
-Garrett Wasn't
+#Assembler-TicTacToe
+These are the requirements for the program, listed in no particular order.
+
+1. The program must be written completely in x86 assembler, and must compile and run 
+	using the NASM and GNU/Linux environment found on CS1, whether or not you actually write it there.						[]
+
+2. The program will run in ASCII mode. It should display properly on a screen with 80 
+	columns and 25 lines. There is no need to support input of differently sized output screens, 
+	excepting as discussed in the last numbered bullet below.											[]
+
+3. It is acceptable to use both system calls and C function calls, but not so extensively 
+	that you do not demonstrate your aptitude and ability to do assembly coding.									[]
+
+4. Teams will be composed of one, two, or three students from this class. No other human 
+	resources are allowed. I must be told the names of the team members before coding is started, 
+	and the teams will not change after they are formed, except maybe by me, and then only under exceptional 
+	circumstances.																	[]
+
+5. This assignment is open book, open note, open internet with the following exclusions:								[]
+
+6. You are not allowed to use any code written by anyone outside the immediate team.									[]
+
+7. Members of one team are allowed to confer with members of any other team only in general 
+	conversations. For example, specific logic discussions are not allowed; however, how to do something 
+	in assembler is acceptable. If you are not sure whether any particular conversation is allowed, just ask.					[]
+
+8. The computer's name is to be Hal. No exceptions. The computer will be called by his name, not just "the computer".					[]
+
+9. The player will be called by name, which is to be input (as one single word, no tabs or spaces, alpha 
+	characters only) at the beginning of the program before play begins.										[]
+
+10. Who plays X and who plays O is to be chosen randomly for the first game of each match.								[]
+
+11. After each game has ended, the user will be asked whether he wants to play another game. 
+	If so, then play again. If not, then end gracefully.												[]
+
+12. For subsequent games after the first, the players will alternate playing X and O; that is, 
+	the player who played as X in the previous game will play as O in the next, and the person previously
+	playing O will play as X.															[]
+
+13. The player playing X always plays first in any game.												[]
+
+14. When the computer is playing as X, the first move must be made randomly . that is, it 
+	might appear in any of the three positions (corner, side, center) with roughly equal probability.						[]
+
+15. The board must be completely displayed after each move by each player. Although we have 
+	not studied graphical output, the board should be visual . draw the board using standard ASCII or unicode 
+	characters. (Also see the Escape Sequences section below.)											[]
+
+16. The use of color in the display is optional but highly recommended. This also is covered 
+	under the Escape Sequences section below.													[]
+
+17. What the game display looks like is completely up to the team, as long as it is reasonably 
+	easy to see and understand, and as long as all the other requirements are met. Imagination and creativity 
+	will be appropriately rewarded.															[]
+
+18. After the human plays, there must be a delay of approximately one second before the computer 
+	plays. There is no need to force a delay after the computer makes a play. (Hint: remember nop?)							[]
+
+19. After each game is completed, the running score (number of wins, losses and ties, and the winning 
+	percentage [as an integer]) for each player will be displayed. Following this, the user must be asked 
+	whether he wants to play another game.														[]
+
+20. The program will continue until the user chooses not to play another game.										[]
+
+21. The standard rules of tic-tac-toe will apply. If you are not aquainted with these rules, 
+	it is your responsibility to find out.
+
+22. If you add any of the following capabilities and features, you will receive bonus points:
+	1. A mode where two humans play against each other. 												[]
+
+	2. A mode where the computer plays against itself.												[]
+
+	3. Audio output to accompany game actions.													[]
+
+	4. Animation.																	[]
+
+27. Support for various languages other than English.
+
+28. A "hint" capability for what the next move should be.
+
+29. Donuts.
