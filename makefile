@@ -17,7 +17,7 @@ run:
 	./$(TARGET)
 gstart:
 	git add *
-	git commit -m '"'${m}'"'
+	git commit -m "${m}"
 gpush:
 	git push origin master
 pull:
