@@ -1,7 +1,7 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 #				MAKEFILE					#
-#
-#
+#	Compiles code and had basic functionality for cleaning working 		#
+#		directory and doing some basic git functions
 #
 #
 #
@@ -17,3 +17,8 @@ run:
 	./$(TARGET)
 gstart:
 	git add *
+	git commit -m '"'${m}'"'
+gpush:
+	git push origin master
+pull:
+	git pull
