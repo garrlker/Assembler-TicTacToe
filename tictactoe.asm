@@ -69,8 +69,8 @@ main:
 	
 	call pickPlayer		;Let's pick who goes first
 
-	;push word [random]
-	;push intfmt
+	;push word [random]	;Okay, until we can get random to print which probably lies in how we're
+	;push intfmt		;Storing it, I'm just gonna leave all of this commented out
 	;push dword [random]
 	;call printf
 	;add esp,8
@@ -112,12 +112,6 @@ main:
         xor EDX,EDX             ;Clear out EDX
         div EBX                 ;Divide EAX by EBX remainder stored in EDX
 	mov [random],EDX	;Store random result in random (0 = cpu, 1 = human)
-	;push EDX
-	push strfmt
-	push word [random]
-	;push strfmt
-	call printf
-	add esp,8
 	ret
 
 	redback:		;Changes the cursor background to red
