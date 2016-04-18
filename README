@@ -1,4 +1,5 @@
 #Assembler-TicTacToe
+If having a weird font after running, type tput sgr0
 These are the requirements for the program, listed in no particular order.
 
 1. The program must be written completely in x86 assembler, and must compile and run 

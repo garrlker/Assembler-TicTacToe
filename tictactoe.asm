@@ -20,14 +20,14 @@ SECTION .data
 	strfmt:		db '%s',0
 	intfmt:		db '%d',0
 	;TicTacToe Grid
-	row1:		db "     |     |     ",10	;For somereason, this won't draw with every row haves a null character	
-	row2:		db "     |     |     ",10	;Since they're after each other in memory doesn't hurt to do it this way
-	row3:		db "-----|-----|-----",10
-	row4:		db "     |     |     ",10
-	row5:		db "     |     |     ",10
-	row6:		db "-----|-----|-----",10
-	row7:		db "     |     |     ",10
-	finrow:		db "     |     |     ",10,0
+	r1:		db "    ", 179, "    ",179,"    ",10
+	r2:		db "    ", 179, "    ",179,"    ",10
+	r3:		db 196,196,196,196,197,196,196,196,196,197,196,196,196,196,10
+	r4:		db "    ", 179, "    ",179,"    ",10
+	r5:		db "    ", 179, "    ",179,"    ",10
+	r6:		db 196,196,196,196,197,196,196,196,196,197,196,196,196,196,10
+	r7:		db "    ", 179, "    ",179,"    ",10
+	finr:		db "    ", 179, "    ",179,"    ",10
 	;Misc
 	limit:		dd 2			;
 	;Escape Sequences
@@ -51,7 +51,7 @@ SECTION .text
 
 main:
 	call clearScreen	;Clear screen
-	call greenback		;Set background color
+	;call greenback		;Set background color
 	call whitefont
 	push dword greetings	;Push our message
 	call printf		;Print it
@@ -69,11 +69,7 @@ main:
 	
 	call pickPlayer		;Let's pick who goes first
 
-	push dword [random]	;Okay, until we can get random to print which probably lies in how we're
-	push intfmt		;Storing it, I'm just gonna leave all of this commented out
-	call printf
-	add esp,8
-
+	call drawBoard
 	jmp Exit		;Exit our program
 	
 	clearScreen:		;Will clear the screen of everything
@@ -83,15 +79,15 @@ main:
 	ret
 
 	drawBoard:		;Draw TicTacToe grid
-	push dword finrow	;Let's push each row of characters and print
-	push dword row7		;For some reason, printf won't let me save space by printing by alternating two row1s and row3s
-	push dword row6		;This works for now though
-	push dword row5
-	push dword row4
-	push dword row3
-	push dword row2
-	push dword row1
-	push dword row1
+	push dword finr
+	push dword r7
+	push dword r6
+	push dword r5
+	push dword r4
+	push dword r3
+	push dword r2
+	push dword r1
+	push dword r1
 	call printf
 	add esp,36
 	ret
