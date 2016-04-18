@@ -29,7 +29,7 @@ SECTION .data
 	row7:		db "     |     |     ",10
 	finrow:		db "     |     |     ",10,0
 	;Misc
-	limit:		db 2				;
+	limit:		dd 2			;
 	;Escape Sequences
 	;clearatr:	db 27,'(0',27,'[m',0;		;Until we need this let's leave it uncommented
 	clearscr:	db 27,'[H',27,'[2J',0;		;PrintF this to clear the screen between draws
@@ -43,9 +43,9 @@ SECTION .data
 	wfont:		db 27,'[37m',0
 ;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 SECTION .bss
-	name:		resb	20			;Reserve memory for user's name
-	terminal:	resb	9 			;One byte for each board position, (0=empty,1=Human,2=CPU)
-	random:  	resb	4			;Memory for our random value, who goes first
+	name		resb	20			;Reserve memory for user's name
+	terminal	resb	9 			;One byte for each board position, (0=empty,1=Human,2=CPU)
+	random  	resb	4			;Memory for our random value, who goes first
 ;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 SECTION .text
 
@@ -69,11 +69,10 @@ main:
 	
 	call pickPlayer		;Let's pick who goes first
 
-	;push word [random]	;Okay, until we can get random to print which probably lies in how we're
-	;push intfmt		;Storing it, I'm just gonna leave all of this commented out
-	;push dword [random]
-	;call printf
-	;add esp,8
+	push dword [random]	;Okay, until we can get random to print which probably lies in how we're
+	push intfmt		;Storing it, I'm just gonna leave all of this commented out
+	call printf
+	add esp,8
 
 	jmp Exit		;Exit our program
 	
@@ -98,17 +97,23 @@ main:
 	ret
 
 	pickPlayer:
-	mov dword [random],0
-        push 0                  ;Push 0 for default time
+	mov dword EAX,[random]
+	sub EAX,[random]
+	mov [random],EAX
+        
+	push 0                  ;Push 0 for default time
         call time               ;Seed random and generate number
         add esp,4               ;Move stack pointer
+	
 	push EAX                ;Push the time it returned
         call srand              ;Now lets seed our random func with it
         add esp,4               ;Move stack pointer
-        push EAX                ;Push so random will store in EAX
+        
+	push EAX                ;Push so random will store in EAX
         call rand               ;Let's get our random value
         add esp,4               ;Move stack pointer
-        mov EBX,[limit]         ;Move 2 to EBX
+        
+	mov EBX,[limit]         ;Move 2 to EBX
         xor EDX,EDX             ;Clear out EDX
         div EBX                 ;Divide EAX by EBX remainder stored in EDX
 	mov [random],EDX	;Store random result in random (0 = cpu, 1 = human)
