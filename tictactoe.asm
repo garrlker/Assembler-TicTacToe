@@ -13,24 +13,24 @@ global main
 ;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 SECTION .data
 	;Prompts
-	cpuname:	db "Hal"
+	cpuname:	db "Hal"			
 	greetings:	db "Hello Human.", 10, "My name is Hal. What is yours?: ",0
 	shittalk:	db "Hello, %s, prepare to lose!", 10, 0
 	;Formats
 	strfmt:		db '%s',0
 	intfmt:		db '%d',0
 	;TicTacToe Grid
-	vertbord: 	db 179,0
-	horbord:	db 196,196,196,196,0
-	joint:		db 197,0
-	newline:	db 10,0
-	xRow1:		db " \/ ",0
-	xRow2:		db " /\ ",0
-	oRow1:		db 218,196,196,191,0
-	oRow2:		db 192,196,196,217,0
-	nothing:	db "    ",0
+	vertbord: 	db 179,0			;This is our vertical border |
+	horbord:	db 196,196,196,196,0		;This is our horizontal border --
+	joint:		db 197,0			;A Cross section for the two borders
+	newline:	db 10,0				;Makes life easier for printing the grid
+	xRow1:		db " \/ ",0			;Top row of X
+	xRow2:		db " /\ ",0			;Bottom row of X
+	oRow1:		db 218,196,196,191,0		;Top row of O
+	oRow2:		db 192,196,196,217,0		;Bottom row of O
+	nothing:	db "    ",0			;Incase nothing on that slot of board
 	;0 For nothing | 1 for X | -1 for O
-	topleft:	dd 0
+	topleft:	dd 0				;Our player(s) and CPU should change these values
 	topmid:		dd 0
 	topright:	dd 0
 	midleft:	dd 0
@@ -40,9 +40,8 @@ SECTION .data
 	bottommid:	dd 0
 	bottomright:	dd 0
 	;Misc
-	limit:		dd 2			;
+	limit:		dd 2				;We mod random with this to pick who goes first
 	;Escape Sequences
-	;clearatr:	db 27,'(0',27,'[m',0;		;Until we need this let's leave it uncommented
 	clearscr:	db 27,'[H',27,'[2J',0;		;PrintF this to clear the screen between draws
 	;Background Colors
 	greenbackgrnd:	db 27,'[42m',0			;Change what were drawing to have a green background
@@ -62,7 +61,6 @@ SECTION .text
 
 main:
 	call clearScreen	;Clear screen
-	;call greenback		;Set background color
 	call grnfont
 	push dword greetings	;Push our message
 	call printf		;Print it
@@ -91,23 +89,23 @@ main:
 
 	drawBoard:		;PrintSlotTop and PrintSlopBottom are printing the top and bottom halfs of each slot based on the number in the given slot
 	mov EAX,[topleft]	;Print each row one after another
-	call printslottop	;Top most rows
-	call printvertbord	;I also seperated the rows and what not to make it easier
+	call printslottop	;Top Left Slot
+	call printvertbord	
 
-	mov EAX,[topmid]
-	call printslottop
+	mov EAX,[topmid]	;Top Middle Slot
+	call printslottop	;Prints top half of X,O,or nothing
 	call printvertbord
 
-	mov EAX,[topright]
-	call printslottop
-	call printnewline
+	mov EAX,[topright]	;Top Right Slot
+	call printslottop	;
+	call printnewline	;This is the end so newline
 
-	mov EAX,[topleft]
-	call printslotbottom
+	mov EAX,[topleft]	;Top Left Slot - Bottom
+	call printslotbottom	;Prints bottom half of X,O,or nothing
 	call printvertbord
 	
-	mov EAX,[topmid]
-	call printslotbottom
+	mov EAX,[topmid]	;Top Middle Slot
+	call printslotbottom	;Prints the bottom half of X,o,or nothing
 	call printvertbord
 
 	mov EAX,[topright]
@@ -115,7 +113,7 @@ main:
 	call printnewline
 
 	call printhorbord	;1st Horizontal boundary
-	call printjoint
+	call printjoint		;Cross section
 	call printhorbord
 	call printjoint
 	call printhorbord
@@ -175,77 +173,76 @@ main:
 	mov EAX,[bottomright]
 	call printslotbottom
 	call printnewline
-
 	ret
 
-	printslottop:
+	printslottop:		;Prints the top half of an X,O,or nothing depending on the value in EAX(-1(O),0( ),1(X))
 	cmp EAX,0
 	jg prnsxtop
 	jl prnsotop
 	jz prnsn
 	
-	printslotbottom:
+	printslotbottom:	;Prints the bottom half of an X,O,or nothing depending on the value in EAX(-1(O),0( ),1(X))
 	cmp EAX,0
 	jg prnsxbottom
 	jl prnsobottom
 	jz prnsn
 	
-	prnsxtop:
+	prnsxtop:		;Prints top half of X
 	push xRow1
 	push strfmt
 	call printf
 	add esp,8
 	ret
 
-	prnsotop:
+	prnsotop:		;Prints the top half of O
 	push oRow1
 	push strfmt
 	call printf
 	add esp,8
 	ret
 
-	prnsxbottom:
+	prnsxbottom:		;Prints the bottom half of X
 	push xRow2
 	push strfmt
 	call printf
 	add esp,8
 	ret
 
-	prnsobottom:
+	prnsobottom:		;Prints the bottom half of O
 	push oRow2
 	push strfmt
 	call printf
 	add esp,8
 	ret
 
-	prnsn:
+	prnsn:			;Prints a whole lotta nothing
 	push nothing
 	call printf
 	add esp,4
 	ret
 
-	printvertbord:
+	printvertbord:		;Prints a vertical border (|)
 	push vertbord
 	push strfmt
 	call printf
 	add esp,8
 	ret
 
-	printhorbord:
+	printhorbord:		;Prints a horizontal border (----)
 	push horbord
 	push strfmt
 	call printf
 	add esp,8
 	ret
 
-	printjoint:
+	printjoint:		;Prints a cross section (+)
 	push joint
 	push strfmt
 	call printf
 	add esp,8
 	ret
 
-	printnewline:
+	printnewline:		;Prints newline char
 	push newline
 	push strfmt
 	call printf
@@ -253,7 +250,7 @@ main:
 	ret
 
 
-	pickPlayer:
+	pickPlayer:		;Randomly picks who will go first(Value is stored in random)
 	mov dword EAX,[random]
 	sub EAX,[random]
 	mov [random],EAX
@@ -288,13 +285,13 @@ main:
 	add esp,4
 	ret
 
-	grnfont:
+	grnfont:		;Changes font to green
 	push dword gfont
 	call printf
 	add esp,4
 	ret
 
-	whitefont:
+	whitefont:		;Changes font to white
 	push dword wfont
 	call printf
 	add esp,4
