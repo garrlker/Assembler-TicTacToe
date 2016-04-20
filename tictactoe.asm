@@ -20,14 +20,25 @@ SECTION .data
 	strfmt:		db '%s',0
 	intfmt:		db '%d',0
 	;TicTacToe Grid
-	r1:		db "    ", 179, "    ",179,"    ",10
-	r2:		db "    ", 179, "    ",179,"    ",10
-	r3:		db 196,196,196,196,197,196,196,196,196,197,196,196,196,196,10
-	r4:		db "    ", 179, "    ",179,"    ",10
-	r5:		db "    ", 179, "    ",179,"    ",10
-	r6:		db 196,196,196,196,197,196,196,196,196,197,196,196,196,196,10
-	r7:		db "    ", 179, "    ",179,"    ",10
-	finr:		db "    ", 179, "    ",179,"    ",10
+	vertbord: 	db 179,0
+	horbord:	db 196,196,196,196,0
+	joint:		db 197,0
+	newline:	db 10,0
+	xRow1:		db " \/ ",0
+	xRow2:		db " /\ ",0
+	oRow1:		db 218,196,196,191,0
+	oRow2:		db 192,196,196,217,0
+	nothing:	db "    ",0
+	;0 For nothing | 1 for X | -1 for O
+	topleft:	dd 0
+	topmid:		dd 0
+	topright:	dd 0
+	midleft:	dd 0
+	midmid:		dd 0
+	midright:	dd 0
+	bottomleft:	dd 0
+	bottommid:	dd 0
+	bottomright:	dd 0
 	;Misc
 	limit:		dd 2			;
 	;Escape Sequences
@@ -52,7 +63,7 @@ SECTION .text
 main:
 	call clearScreen	;Clear screen
 	;call greenback		;Set background color
-	call whitefont
+	call grnfont
 	push dword greetings	;Push our message
 	call printf		;Print it
 	add esp,4
@@ -78,19 +89,169 @@ main:
 	add esp,4
 	ret
 
-	drawBoard:		;Draw TicTacToe grid
-	push dword finr
-	push dword r7
-	push dword r6
-	push dword r5
-	push dword r4
-	push dword r3
-	push dword r2
-	push dword r1
-	push dword r1
-	call printf
-	add esp,36
+	drawBoard:		;PrintSlotTop and PrintSlopBottom are printing the top and bottom halfs of each slot based on the number in the given slot
+	mov EAX,[topleft]	;Print each row one after another
+	call printslottop	;Top most rows
+	call printvertbord	;I also seperated the rows and what not to make it easier
+
+	mov EAX,[topmid]
+	call printslottop
+	call printvertbord
+
+	mov EAX,[topright]
+	call printslottop
+	call printnewline
+
+	mov EAX,[topleft]
+	call printslotbottom
+	call printvertbord
+	
+	mov EAX,[topmid]
+	call printslotbottom
+	call printvertbord
+
+	mov EAX,[topright]
+	call printslotbottom
+	call printnewline
+
+	call printhorbord	;1st Horizontal boundary
+	call printjoint
+	call printhorbord
+	call printjoint
+	call printhorbord
+	call printnewline
+	
+	mov EAX,[midleft]	;Middle Rows
+	call printslottop
+	call printvertbord
+
+	mov EAX,[midmid]
+	call printslottop
+	call printvertbord
+
+	mov EAX,[midright]
+	call printslottop
+	call printnewline
+	
+	mov EAX,[midleft]
+	call printslotbottom
+	call printvertbord
+
+	mov EAX,[midmid]
+	call printslotbottom
+	call printvertbord
+
+	mov EAX,[midright]
+	call printslotbottom
+	call printnewline
+
+	call printhorbord	;2nd Horizontal boundary
+	call printjoint
+	call printhorbord
+	call printjoint
+	call printhorbord
+	call printnewline
+	
+	mov EAX,[bottomleft]
+	call printslottop
+	call printvertbord
+
+	mov EAX,[bottommid]
+	call printslottop
+	call printvertbord
+
+	mov EAX,[bottomright]
+	call printslottop
+	call printnewline
+
+	mov EAX,[bottomleft]
+	call printslotbottom
+	call printvertbord
+
+	mov EAX,[bottommid]
+	call printslotbottom
+	call printvertbord
+
+	mov EAX,[bottomright]
+	call printslotbottom
+	call printnewline
+
 	ret
+
+	printslottop:
+	cmp EAX,0
+	jg prnsxtop
+	jl prnsotop
+	jz prnsn
+	
+	printslotbottom:
+	cmp EAX,0
+	jg prnsxbottom
+	jl prnsobottom
+	jz prnsn
+	
+	prnsxtop:
+	push xRow1
+	push strfmt
+	call printf
+	add esp,8
+	ret
+
+	prnsotop:
+	push oRow1
+	push strfmt
+	call printf
+	add esp,8
+	ret
+
+	prnsxbottom:
+	push xRow2
+	push strfmt
+	call printf
+	add esp,8
+	ret
+
+	prnsobottom:
+	push oRow2
+	push strfmt
+	call printf
+	add esp,8
+	ret
+
+	prnsn:
+	push nothing
+	call printf
+	add esp,4
+	ret
+
+	printvertbord:
+	push vertbord
+	push strfmt
+	call printf
+	add esp,8
+	ret
+
+	printhorbord:
+	push horbord
+	push strfmt
+	call printf
+	add esp,8
+	ret
+
+	printjoint:
+	push joint
+	push strfmt
+	call printf
+	add esp,8
+	ret
+
+	printnewline:
+	push newline
+	push strfmt
+	call printf
+	add esp,8
+	ret
+
 
 	pickPlayer:
 	mov dword EAX,[random]
