@@ -2,6 +2,7 @@
 ;Date Started: April/4/2016
 ;To Compile
 ;nasm -f elf32 tictactoe.asm && gcc -m32 -o tictactoe tictactoe.o
+;Or use the make file - That is easier
 
 ;~~~~C Functions~~~~;
 extern printf           ;Printing to the screen
@@ -16,6 +17,7 @@ SECTION .data
 	cpuname:	db "Hal"			
 	greetings:	db "Hello Human.", 10, "My name is Hal. What is yours?: ",0
 	shittalk:	db "Hello, %s, prepare to lose!", 10, 0
+	makemove:	db "Make a move sucka'?", 10, 0
 	;Formats
 	strfmt:		db '%s',0
 	intfmt:		db '%d',0
@@ -51,6 +53,7 @@ SECTION .data
 	gfont:		db 27,'[32m',0
 	rfont:		db 27,'[31m',0
 	wfont:		db 27,'[37m',0
+
 ;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 SECTION .bss
 	name		resb	20			;Reserve memory for user's name
@@ -71,12 +74,20 @@ main:
 	call scanf		;Call the function
 	add esp,8		;Move the stack pointer
 
+	call clearScreen
+
 	push name		;Push user's name
 	push dword shittalk	;Let's shittalk
 	call printf		;Print to screen
 	add esp,8		;Move stack pointer
 	
 	call pickPlayer		;Let's pick who goes first
+	push makemove		;Ask the player for a move
+	push strfmt		;string format
+	call printf		;print out the make move
+	add esp,8		;manipulate stack
+
+	
 
 	call drawBoard
 	jmp Exit		;Exit our program
@@ -296,5 +307,8 @@ main:
 	call printf
 	add esp,4
 	ret
+
+	
+	
 Exit:
 	ret
