@@ -80,7 +80,23 @@ main:
 
 	call drawBoard
 	jmp Exit		;Exit our program
+;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+	resetBoard:		;Resets all slots to 0
+	mov [topleft],0
+	mov [topmid],0
+	mov [topright],0
 	
+	mov [midleft],0
+	mov [midmid],0
+	mov [midright],0
+	
+	mov [bottomleft],0
+	mov [bottommid],0
+	mov [bottomright],0
+	ret
+
+
 	clearScreen:		;Will clear the screen of everything
 	push dword clearscr
 	call printf
