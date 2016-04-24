@@ -14,9 +14,12 @@ global main
 ;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 SECTION .data
 	;Prompts
-	cpuname:	db "Hal"			
+	cpuname:	db "Hal",0			
 	greetings:	db "Hello Human.", 10, "My name is Hal. What is yours?: ",0
 	shittalk:	db "Hello, %s, prepare to lose!", 10, 0
+	playerwins:	db "%s wins the game!",10,0
+	halwins:	db "HAHA!",10,"You lose, %s!",10,0
+	menu:		db "Player vs Hal(1) or Player vs Player(2)",0
 	makemove:	db "Make a move sucka'?", 10, 0
 	;Formats
 	strfmt:		db '%s',0
@@ -32,17 +35,26 @@ SECTION .data
 	oRow2:		db 192,196,196,217,0		;Bottom row of O
 	nothing:	db "    ",0			;Incase nothing on that slot of board
 	;0 For nothing | 1 for X | -1 for O
-	topleft:	dd 0				;Our player(s) and CPU should change these values
-	topmid:		dd 0
-	topright:	dd 0
-	midleft:	dd 0
-	midmid:		dd 0
-	midright:	dd 0
-	bottomleft:	dd 0
-	bottommid:	dd 0
-	bottomright:	dd 0
+	topleft:	times 4 db 0			;Our player(s) and CPU should change these values
+	topmid:		times 4 db 0
+	topright:	times 4 db 0
+	midleft:	times 4 db 0
+	midmid:		times 4 db 0
+	midright:	times 4 db 0
+	bottomleft:	times 4 db 0
+	bottommid:	times 4 db 0
+	bottomright:	times 4 db 0
 	;Misc
 	limit:		dd 2				;We mod random with this to pick who goes first
+	easymodelimit	dd 10
+	bef:		db "Before",0
+	aft:		db "After",0
+	currentPlayer	times 4 db 0
+	currentMove	times 4 db 0
+	clearReg	times 4 db 0			;Let's use this to clear out EAX between operations
+	playerWins	times 4 db 0
+	HalWin		times 4 db 0
+	return		times 4 db 0			;At this point im abusing the times stuff, but so far it has solved some bugs for me
 	;Escape Sequences
 	clearscr:	db 27,'[H',27,'[2J',0;		;PrintF this to clear the screen between draws
 	;Background Colors
@@ -58,11 +70,21 @@ SECTION .data
 SECTION .bss
 	name		resb	20			;Reserve memory for user's name
 	terminal	resb	9 			;One byte for each board position, (0=empty,1=Human,2=CPU)
-	random  	resb	4			;Memory for our random value, who goes first
+	random  	resw	1			;Memory for our random value, who goes first
+	;currentPlayer	resw	1			;Who currently goes first
+	;currentMove	resw	1			;Players current move
 ;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 SECTION .text
 
 main:
+	;--------------
+	;Let's try initializing data
+	xor EAX,EAX		;Neat way of getting 0
+	mov [random],EAX
+	mov [currentPlayer],EAX
+	mov [currentMove],EAX
+	;Dunno if it works, will delete if it doesnt
+
 	call clearScreen	;Clear screen
 	call grnfont
 	push dword greetings	;Push our message
@@ -82,29 +104,363 @@ main:
 	add esp,8		;Move stack pointer
 	
 	call pickPlayer		;Let's pick who goes first
-	push makemove		;Ask the player for a move
-	push strfmt		;string format
-	call printf		;print out the make move
-	add esp,8		;manipulate stack
+	call loopGame		;Let's play until someone wins
 
-	
-
-	call drawBoard
 	jmp Exit		;Exit our program
 ;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+	
+	loopGame:
+	loopGameLoop:		;Loop until someone wins
+		call playTurn	;Play current players turn
+		call drawBoard	;Draw updated board
+		call checkWin	;Check if someone won, if not then keep looping
+		cmp EAX,0
+		jz loopGameLoop
+	ret
+	
+	checkWin:	;So neat way to check if they've won
+			;We know that all player slot values are 1 and 
+			;all Hal slot values are -1.
+			;There are only 8 patterns to win tictactoe
+			;So by adding those patterns up, a Player win should be 3
+			;And a Hal win should be -3
+	
+	;Row 1
+	mov EAX,[topleft]
+	add EAX,[topmid]
+	add EAX,[topright]
+	call chkPlayerWin
+	cmp EAX,0		;Check the result of our chkPlayerWin
+	jnz checkWinExit
+	;Row 2
+	mov EAX,[midleft]
+	add EAX,[midmid]
+	add EAX,[midright]
+	call chkPlayerWin
+	cmp EAX,0		;Check the result of our chkPlayerWin
+	jnz checkWinExit
+	;Row 3
+	mov EAX,[bottomleft]
+	add EAX,[bottommid]
+	add EAX,[bottomright]
+	call chkPlayerWin
+	cmp EAX,0		;Check the result of our chkPlayerWin
+	jnz checkWinExit
+	;Col 1
+	mov EAX,[topleft]
+	add EAX,[midleft]
+	add EAX,[bottomleft]
+	call chkPlayerWin
+	cmp EAX,0		;Check the result of our chkPlayerWin
+	jnz checkWinExit
+	;Col 2
+	mov EAX,[topmid]
+	add EAX,[midmid]
+	add EAX,[bottommid]
+	call chkPlayerWin
+	cmp EAX,0		;Check the result of our chkPlayerWin
+	jnz checkWinExit
+	;Col 3
+	mov EAX,[topright]
+	add EAX,[midright]
+	add EAX,[bottomright]
+	call chkPlayerWin
+	cmp EAX,0		;Check the result of our chkPlayerWin
+	jnz checkWinExit
+	;TLtoBR Diag
+	mov EAX,[topleft]
+	add EAX,[midmid]
+	add EAX,[bottomright]
+	call chkPlayerWin
+	cmp EAX,0		;Check the result of our chkPlayerWin
+	jnz checkWinExit
+	;BLtoTR Diag
+	mov EAX,[bottomleft]
+	add EAX,[midmid]
+	add EAX,[topright]
+	call chkPlayerWin
+
+	checkWinExit:
+	ret
+
+	chkPlayerWin:
+	cmp EAX,3
+	jz playerWon		;Check if our math worked and player won
+	chkHalWin:
+	cmp EAX,-3
+	jz HalWon		;Check if math worked and Hal won
+	mov EAX,0		;Noone won so put 0 in EAX so our earlier loop knows
+	ret
+
+	playerWon:		;Add 1 to the amount of player wins
+	mov EAX,[playerWins]
+	add EAX,1
+	mov [playerWins],EAX
+	mov EAX,1		;Let's our earlier loop know player won
+
+	push name
+	push playerwins
+	call printf
+	add esp,8
+	ret
+
+	HalWon:			;Add 1 to the amount of Hal wins
+	mov EAX,[HalWin]
+	add EAX,1
+	mov [HalWin],EAX
+	mov EAX,-1		;Let's our loop know Hal won
+	
+	push name
+	push halwins
+	call printf
+	add esp,8
+	ret
+
+	startGame:			;Starts our game of tictactoe
+	call resetBoard			;Get our game ready
+	mov EAX,[random]		;Set who goes first
+	mov [currentPlayer],EAX
+	
+
+	ret
+
+	printcurplayer:
+	push dword [currentPlayer]
+	push intfmt
+	call printf
+	add esp,8
+	call printnewline
+	ret
+
+	playTurn:
+	cmp dword [currentPlayer],0		;Compare who should go with 0 to jump to said players turn
+	jg xmoveHuman
+	call xmoveHAL
+
+	push bef
+	push strfmt
+	call printf
+	add esp,8
+	call printcurplayer
+
+	xor EAX,EAX
+	mov EAX,[currentPlayer]
+	cbw
+	cwd
+	add EAX,2
+	mov [currentPlayer],EAX
+	
+	push aft
+	push strfmt
+	call printf
+	add esp,8
+	call printcurplayer
+
+
+
+	ret
+
+	xmoveHuman:			;-Error is guarunteed between scanf and 2nd printcurplayer
+	call xmovePlayer
+	playerMakeMove:
+	call parseMove
+	cmp EAX,0
+	je playerMakeMove
+	
+	push bef
+	push strfmt
+	call printf
+	add esp,8
+	call printcurplayer
+
+	xor EAX,EAX
+	mov EAX,[currentPlayer]
+	sub EAX,2
+	mov [currentPlayer],EAX
+
+	push aft
+	push strfmt
+	call printf
+	add esp,8
+	
+	push name
+	push strfmt
+	call printf
+	add esp,8
+	call printcurplayer
+	call printnewline
+	ret
+	
+	xmoveHAL:
+	;The 8 steps of tictactoe will go here
+	mov dword EAX,[random]
+	sub EAX,[random]
+	mov [random],EAX
+        
+
+	;This is our Easy Peasy mode AI
+	;Basically if somewhere if our logic we don't know what to do, just do this
+	;It works pretty well
+	HalrandomMove:
+	push 0                  ;Push 0 for default time
+        call time               ;Seed random and generate number
+        add esp,4               ;Move stack pointer
+	
+	push EAX                ;Push the time it returned
+        call srand              ;Now lets seed our random func with it
+        add esp,4               ;Move stack pointer
+        
+	push EAX                ;Push so random will store in EAX
+        call rand               ;Let's get our random value
+        add esp,4               ;Move stack pointer
+        
+	mov EBX,[easymodelimit]         ;Move 10 to EBX
+        xor EDX,EDX             	;Clear out EDX
+        div EBX                 	;Divide EAX by EBX remainder stored in EDX
+	mov EAX,EDX
+	cbw
+	cwd
+	mov [currentMove],EAX	
+	call parseMove
+	
+	cmp EAX,0		;Let's see if we made a move
+	je HalrandomMove
+
+	HalmovePlayed:
+	push cpuname
+	push strfmt
+	call printf
+	add esp,8
+	call printcurplayer
+	ret
+	
+	xmovePlayer:
+	push makemove		;Tell the player to input a move
+	push strfmt
+	call printf
+	add esp,8
+
+	push currentMove	;For now were gonna get input in a shitty way until I feel like doing it a good way
+	push intfmt		;board goes in order 1-TL 2-TM 3-TR and so on until 9 is BR
+	call scanf
+	add esp,8
+
+	ret
+
+
+	parseMove:
+	mov EAX,[currentMove]
+
+	pmoveTL:
+	sub EAX,1
+	jnz pmoveTM
+	mov EAX,[topleft]
+	cmp EAX,0
+	jnz parseMoveSlotFilled
+	mov EAX,[currentPlayer]
+	mov [topleft],EAX
+	jmp xmovePlayerExit
+
+	pmoveTM:
+	sub EAX,1
+	jnz pmoveTR
+	mov EAX,[topmid]
+	cmp EAX,0
+	jnz parseMoveSlotFilled
+	mov EAX,[currentPlayer]
+	mov [topmid],EAX
+	jmp xmovePlayerExit
+
+	pmoveTR:
+	sub EAX,1
+	jnz pmoveML
+	mov EAX,[topright]
+	cmp EAX,0
+	jnz parseMoveSlotFilled
+	mov EAX,[currentPlayer]
+	mov [topright],EAX
+	jmp xmovePlayerExit
+
+	pmoveML:
+	sub EAX,1
+	jnz pmoveMM
+	mov EAX,[midleft]
+	cmp EAX,0
+	jnz parseMoveSlotFilled
+	mov EAX,[currentPlayer]
+	mov [midleft],EAX
+	jmp xmovePlayerExit
+
+	pmoveMM:
+	sub EAX,1
+	jnz pmoveMR
+	mov EAX,[midmid]
+	cmp EAX,0
+	jnz parseMoveSlotFilled
+	mov EAX,[currentPlayer]
+	mov [midmid],EAX
+	jmp xmovePlayerExit
+
+	pmoveMR:
+	sub EAX,1
+	jnz pmoveBL
+	mov EAX,[midright]
+	cmp EAX,0
+	jnz parseMoveSlotFilled
+	mov EAX,[currentPlayer]
+	mov [midright],EAX
+	jmp xmovePlayerExit
+
+	pmoveBL:
+	sub EAX,1
+	jnz pmoveBM
+	mov EAX,[bottomleft]
+	cmp EAX,0
+	jnz parseMoveSlotFilled
+	mov EAX,[currentPlayer]
+	mov [bottomleft],EAX
+	jmp xmovePlayerExit
+
+	pmoveBM:
+	sub EAX,1
+	jnz pmoveBR
+	mov EAX,[bottommid]
+	cmp EAX,0
+	jnz parseMoveSlotFilled
+	mov EAX,[currentPlayer]
+	mov [bottommid],EAX
+	jmp xmovePlayerExit
+
+	pmoveBR:
+	sub EAX,1
+	jnz xmovePlayerExit
+	mov EAX,[bottomright]
+	cmp EAX,0
+	jnz parseMoveSlotFilled
+	mov EAX,[currentPlayer]
+	mov [bottomright],EAX
+	
+	xmovePlayerExit:
+	mov EAX,1		;Let's earlier functions know move was made
+	ret
+
+	parseMoveSlotFilled:
+	mov EAX,0		;Move was not made, slot was full
+	ret	
+
 	resetBoard:		;Resets all slots to 0
-	mov [topleft],0
-	mov [topmid],0
-	mov [topright],0
+	mov dword [topleft],0
+	mov dword [topmid],0
+	mov dword [topright],0
 	
-	mov [midleft],0
-	mov [midmid],0
-	mov [midright],0
+	mov dword [midleft],0
+	mov dword [midmid],0
+	mov dword [midright],0
 	
-	mov [bottomleft],0
-	mov [bottommid],0
-	mov [bottomright],0
+	mov dword [bottomleft],0
+	mov dword [bottommid],0
+	mov dword [bottomright],0
 	ret
 
 
@@ -278,8 +634,7 @@ main:
 
 
 	pickPlayer:		;Randomly picks who will go first(Value is stored in random)
-	mov dword EAX,[random]
-	sub EAX,[random]
+	xor EAX,EAX
 	mov [random],EAX
         
 	push 0                  ;Push 0 for default time
@@ -297,7 +652,16 @@ main:
 	mov EBX,[limit]         ;Move 2 to EBX
         xor EDX,EDX             ;Clear out EDX
         div EBX                 ;Divide EAX by EBX remainder stored in EDX
-	mov [random],EDX	;Store random result in random (0 = cpu, 1 = human)
+	mov EAX,EDX		;Store random result in random (0 = cpu, 1 = human)
+	
+	cmp EAX,0		;Except our moveparser is going to use -1 for cpu and 1 for human so we need to change it
+	jz pickPlayerCPU
+	mov [currentPlayer],EAX
+	ret
+
+	pickPlayerCPU:
+	sub EAX,1
+	mov [currentPlayer],EAX
 	ret
 
 	redback:		;Changes the cursor background to red
