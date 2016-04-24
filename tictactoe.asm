@@ -46,7 +46,7 @@ SECTION .data
 	bottomright:	times 4 db 0
 	;Misc
 	limit:		dd 2				;We mod random with this to pick who goes first
-	easymodelimit	dd 10
+	easymodelimit	dd 9
 	bef:		db "Before",0
 	aft:		db "After",0
 	currentPlayer	times 4 db 0
@@ -261,43 +261,22 @@ main:
 
 	ret
 
-	xmoveHuman:			;-Error is guarunteed between scanf and 2nd printcurplayer
+	xmoveHuman:		
 	call xmovePlayer
 	playerMakeMove:
 	call parseMove
 	cmp EAX,0
-	je playerMakeMove
+	je xmovePlayer
 	
-	push bef
-	push strfmt
-	call printf
-	add esp,8
-	call printcurplayer
-
 	xor EAX,EAX
 	mov EAX,[currentPlayer]
 	sub EAX,2
 	mov [currentPlayer],EAX
 
-	push aft
-	push strfmt
-	call printf
-	add esp,8
-	
-	push name
-	push strfmt
-	call printf
-	add esp,8
-	call printcurplayer
-	call printnewline
 	ret
 	
 	xmoveHAL:
 	;The 8 steps of tictactoe will go here
-	mov dword EAX,[random]
-	sub EAX,[random]
-	mov [random],EAX
-        
 
 	;This is our Easy Peasy mode AI
 	;Basically if somewhere if our logic we don't know what to do, just do this
@@ -315,24 +294,24 @@ main:
         call rand               ;Let's get our random value
         add esp,4               ;Move stack pointer
         
-	mov EBX,[easymodelimit]         ;Move 10 to EBX
+	mov EBX,[easymodelimit]         ;Move 9 to EBX
         xor EDX,EDX             	;Clear out EDX
         div EBX                 	;Divide EAX by EBX remainder stored in EDX
 	mov EAX,EDX
 	cbw
 	cwd
+	add EAX,1			;So we changed the byte to a doubleword and added one so 0 can't be an input
 	mov [currentMove],EAX	
 	call parseMove
 	
 	cmp EAX,0		;Let's see if we made a move
-	je HalrandomMove
-
-	HalmovePlayed:
-	push cpuname
-	push strfmt
-	call printf
-	add esp,8
-	call printcurplayer
+	je xmoveHAL
+	
+;	push cpuname
+;	push strfmt
+;	call printf
+;	add esp,8
+;	call printcurplayer
 	ret
 	
 	xmovePlayer:
@@ -450,17 +429,18 @@ main:
 	ret	
 
 	resetBoard:		;Resets all slots to 0
-	mov dword [topleft],0
-	mov dword [topmid],0
-	mov dword [topright],0
+	mov EAX,clearReg
+	mov [topleft],EAX
+	mov [topmid],EAX
+	mov [topright],EAX
 	
-	mov dword [midleft],0
-	mov dword [midmid],0
-	mov dword [midright],0
+	mov [midleft],EAX
+	mov [midmid],EAX
+	mov [midright],EAX
 	
-	mov dword [bottomleft],0
-	mov dword [bottommid],0
-	mov dword [bottomright],0
+	mov [bottomleft],EAX
+	mov [bottommid],EAX
+	mov [bottomright],EAX
 	ret
 
 
