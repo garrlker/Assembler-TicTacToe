@@ -24,6 +24,8 @@ SECTION .data
 	;Formats
 	strfmt:		db '%s',0
 	intfmt:		db '%d',0
+	CWLstr:		db "CWL TEST %d",10,0
+	what_step:	db "We got to %d",10,0
 	;TicTacToe Grid
 	vertbord: 	db 179,0			;This is our vertical border |
 	horbord:	db 196,196,196,196,0		;This is our horizontal border --
@@ -50,16 +52,17 @@ SECTION .data
 	easymodelimit	dd 9
 	bef:		db "Before",0
 	aft:		db "After",0
-	currentPlayer	times 4 db 0
-	currentMove	times 4 db 0
-	clearReg	times 4 db 0			;Let's use this to clear out EAX between operations
-	playerWins	times 4 db 0
-	HalWin		times 4 db 0
-	return		times 4 db 0			;At this point im abusing the times stuff, but so far it has solved some bugs for me
-	playerid	times 4 db 0
-	HalID		times 4 db 0
-	playerwinamt	times 4 db 0			;These are for the checkwin function, they will go between 3 and -3
-	Halwinamt	times 4 db 0
+	currentPlayer:	times 4 db 0
+	currentMove:	times 4 db 0
+	clearReg:	times 4 db 0			;Let's use this to clear out EAX between operations
+	playerWins:	times 4 db 0
+	HalWin:		times 4 db 0
+	return:		times 4 db 0			;At this point im abusing the times stuff, but so far it has solved some bugs for me
+	playerid:	times 4 db 0
+	HalID:		times 4 db 0
+	playerwinamt:	times 4 db 0			;These are for the checkwin function, they will go between 3 and -3
+	Halwinamt:	times 4 db 0
+	temp_step:	times 4 db 0
 	;Escape Sequences
 	clearscr:	db 27,'[H',27,'[2J',0;		;PrintF this to clear the screen between draws
 	;Background Colors
@@ -70,7 +73,8 @@ SECTION .data
 	gfont:		db 27,'[32m',0
 	rfont:		db 27,'[31m',0
 	wfont:		db 27,'[37m',0
-
+	;DEBUG
+	ChkWinDebug:	db "It got this far %d",10,0
 ;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 SECTION .bss
 	name		resb	20			;Reserve memory for user's name
@@ -122,6 +126,7 @@ main:
 	loopGameLoop:		;Loop until someone wins
 		call playTurn	;Play current players turn
 		call drawBoard	;Draw updated board
+		call printnewline
 		call checkWin	;Check if someone won, if not then keep looping
 		cmp EAX,0
 		jz loopGameLoop
@@ -270,12 +275,6 @@ main:
 	jg xmoveHuman
 	call xmoveHAL
 
-	;xor EAX,EAX
-	;mov EAX,[currentPlayer]
-	;cbw
-	;cwd
-	;add EAX,2
-	;mov [currentPlayer],EAX
 	playTurnExit:
 	mov EAX,[playerid]
 	mov [currentPlayer],EAX	
@@ -291,18 +290,388 @@ main:
 	cmp EAX,0
 	je xmovePlayer
 	
-	;xor EAX,EAX
-	;mov EAX,[currentPlayer]
-	;sub EAX,2
-	;mov [currentPlayer],EAX
 	mov EAX,[HalID]
 	mov [currentPlayer],EAX
 
 
 	ret
 	
-	xmoveHAL:
-	;The 8 steps of tictactoe will go here
+	xmoveHAL:		;This is utilizing the 8 steps to win TicTacToe on wikipedia
+	push 101
+	push what_step
+	call printf
+	add esp,8
+	
+	call HalChkWin
+	cmp EAX,0
+	ja xmoveHalExit
+	
+
+	push 102
+	push what_step
+	call printf
+	add esp,8
+
+	;call HalChkBlockWin
+	;cmp EAX,0
+	;ja xmoveHalExit
+
+	call HalChkCenter
+	cmp EAX,0
+	ja xmoveHalExit
+
+	push 103
+	push what_step
+	call printf
+	add esp,8
+	
+	call HalChkOpCorner
+	cmp EAX,0
+	ja xmoveHalExit
+
+	push 104
+	push what_step
+	call printf
+	add esp,8
+
+	call HalChkCorner
+	cmp EAX,0
+	ja xmoveHalExit
+
+	push 105
+	push what_step
+	call printf
+	add esp,8
+
+	call HalChkSide
+	cmp EAX,0
+	ja xmoveHalExit
+
+	push 106
+	push what_step
+	call printf
+	add esp,8
+
+	call HalrandomMove
+
+
+
+
+	xmoveHalExit:
+	ret
+	
+	
+	CWLdebug:
+	push ECX
+	push CWLstr
+	call printf
+	add esp,8
+	ret
+	
+	HalChkWin:
+	mov EBX,[HalID]		;We're checking for 2 slots, each slot of ours will have our ID. Therefore,
+	add EBX,[HalID]		;We can make our cmp number on the fly here to check everything else with
+
+	mov ECX,4		;For our rotation
+	
+	HalChkWinLoop:
+
+	;push ECX
+	;push ChkWinDebug
+	;call printf
+	;add esp,8
+
+	mov EAX,[topleft]	;Slot 1 + Slot 2
+	add EAX,[topmid]
+	mov EDX,dword 3
+	call CWLdebug
+	cmp EAX,EBX		;Check if those slots are taken
+	jz HalChkWinExit
+
+	mov EAX,[topleft]	;Slot 1 + Slot 3
+	add EAX,[topright]
+	mov EDX,dword 2
+	call CWLdebug
+	cmp EAX,EBX		;Check if those slots are taken
+	jz HalChkWinExit
+
+	mov EAX,[topleft]	;Slot 1 + Slot 4
+	add EAX,[midleft]
+	mov EDX,dword 7
+	call CWLdebug
+	cmp EAX,EBX		;Check if those slots are taken
+	jz HalChkWinExit
+
+	mov EAX,[topleft]	;Slot 1 + Slot 7
+	add EAX,[bottomleft]
+	mov EDX,dword 4
+	call CWLdebug
+	cmp EAX,EBX		;Check if those slots are taken
+	jz HalChkWinExit
+
+	mov EAX,[topleft]	;Slot 1 + Slot 5
+	add EAX,[midmid]
+	mov EDX,dword 9
+	call CWLdebug
+	cmp EAX,EBX		;Check if those slots are taken
+	jz HalChkWinExit
+
+	mov EAX,[topleft]	;Slot 1 + Slot 9
+	add EAX,[bottomright]
+	mov EDX,dword 5
+	call CWLdebug
+	cmp EAX,EBX		;Check if those slots are taken
+	jz HalChkWinExit
+	
+	call rotateBoard
+	call CWLdebug
+	sub ECX,dword 1
+	;call CWLdebug
+	;push EAX
+	;mov EAX,ECX
+	;call CWLdebug
+	;pop EAX
+	;call drawBoard
+	ja  HalChkWinLoop	;Rotate and check again
+	
+	jmp HalChkWinNoMoveExit	;Couldnt find a move so just exit
+
+	HalChkWinExit:
+	mov [currentMove],EDX	;Let's make our move
+	call parseMove		
+	call finishBoardRotate	;Let's rotate our board back to its original rotation
+	mov EAX,1		;Return 1
+	ret
+
+	HalChkWinNoMoveExit:
+	call finishBoardRotate
+	mov EAX,0		;Return 0
+	ret
+	
+	HalChkBlockWin:
+	mov EBX,[playerid]	;We're checking for 2 slots, each slot of ours will have the players ID. Therefore,
+	add EBX,[playerid]	;We can make our cmp number on the fly here to check everything else with
+
+	mov ECX,4		;For our rotation
+	
+	HalChkBlockWinLoop:
+
+	;push ECX
+	;push ChkWinDebug
+	;call printf
+	;add esp,8
+
+
+	mov EAX,[topleft]	;Slot 1 + Slot 2
+	add EAX,[topmid]
+	mov EDX,3
+	cmp EAX,EBX		;Check if those slots are taken
+	jz HalChkBlockWinExit
+
+	mov EAX,[topleft]	;Slot 1 + Slot 3
+	add EAX,[topright]
+	mov EDX,2
+	cmp EAX,EBX		;Check if those slots are taken
+	jz HalChkBlockWinExit
+
+	mov EAX,[topleft]	;Slot 1 + Slot 4
+	add EAX,[midleft]
+	mov EDX,7
+	cmp EAX,EBX		;Check if those slots are taken
+	jz HalChkBlockWinExit
+
+	mov EAX,[topleft]	;Slot 1 + Slot 7
+	add EAX,[bottomleft]
+	mov EDX,4
+	cmp EAX,EBX		;Check if those slots are taken
+	jz HalChkBlockWinExit
+
+	mov EAX,[topleft]	;Slot 1 + Slot 5
+	add EAX,[midmid]
+	mov EDX,9
+	cmp EAX,EBX		;Check if those slots are taken
+	jz HalChkBlockWinExit
+
+	mov EAX,[topleft]	;Slot 1 + Slot 9
+	add EAX,[bottomright]
+	mov EDX,5
+	cmp EAX,EBX		;Check if those slots are taken
+	jz HalChkBlockWinExit
+	
+	call rotateBoard
+	;call drawBoard
+	sub ECX,1
+	ja  HalChkBlockWinLoop	;Rotate and check again
+	
+	jmp HalChkBlockWinNoMoveExit	;Couldnt find a move so just exit
+
+	HalChkBlockWinExit:
+	mov [currentMove],EDX	;Let's make our move
+	call parseMove		
+	call finishBoardRotate	;Let's rotate our board back to its original rotation
+	mov EAX,1		;Return 1
+	ret
+
+	HalChkBlockWinNoMoveExit:
+	call finishBoardRotate
+	mov EAX,0		;Return 0
+	ret
+
+	HalChkCenter:
+	mov EAX,[midmid]	;Pull Center value into EAX
+	cmp EAX,0
+	jnz HalChkCenterExit
+	mov dword [currentMove],5
+	call parseMove
+	mov EAX,1
+	ret
+
+	HalChkCenterExit:
+	mov EAX,0
+	ret
+
+	HalChkOpCorner:
+	mov EBX,[playerid]	;Have our cmp value ready
+	mov ECX,[clearReg]	;0 in ECX
+
+	mov EAX,[topleft]
+	mov EDX,9		;9 is opposite of top left
+	cmp EAX,EBX		;Compare topleft to playerid
+	jnz HalChkOpCorner2
+	mov EAX,[bottomright]
+	cmp EAX,ECX		;Compare opposite slot to 0
+	jz tookOpCornerExit
+	
+	HalChkOpCorner2:
+	
+	mov EAX,[topright]
+	mov EDX,7		;7 is opposite of top right
+	cmp EAX,EBX		
+	jnz HalChkOpCorner3
+	mov EAX,[bottomleft]
+	cmp EAX,ECX		;Compare opposite slot to 0
+	jz tookOpCornerExit
+	
+
+	HalChkOpCorner3:
+	
+	mov EAX,[bottomleft]
+	mov EDX,3		;3 is opposite of bottom left
+	cmp EAX,EBX		
+	jnz HalChkOpCorner4
+	mov EAX,[topright]
+	cmp EAX,ECX		;Compare opposite slot to 0
+	jz tookOpCornerExit
+	
+
+	HalChkOpCorner4:
+	
+	mov EAX,[bottomright]
+	mov EDX,1		;1 is opposite of bottom right
+	cmp EAX,EBX		
+	jnz HalChkOpCornerExit
+	mov EAX,[topleft]
+	cmp EAX,ECX		;Compare opposite slot to 0
+	jz tookOpCornerExit
+	
+	
+	jmp HalChkOpCornerExit
+	tookOpCornerExit:
+	mov [currentMove],EDX
+	call parseMove
+	mov EAX,1
+	ret
+
+	HalChkOpCornerExit:
+	mov EAX,0
+	ret
+
+	
+
+
+
+	HalChkCorner:
+	xor EBX,EBX		;Have our cmp value ready
+
+	mov EAX,[topleft]
+	xor EDX,EDX
+	mov EDX,1		;9 is opposite of top left
+	cmp EAX,EBX		;Compare topleft to playerid
+	jz tookCornerExit
+
+	mov EAX,[topright]
+	mov EDX,3		;7 is opposite of top right
+	cmp EAX,EBX		
+	jz tookCornerExit
+
+	mov EAX,[bottomleft]
+	mov EDX,7		;3 is opposite of bottom left
+	cmp EAX,EBX		
+	jz tookCornerExit
+
+	mov EAX,[bottomright]
+	mov EDX,9		;1 is opposite of bottom right
+	cmp EAX,EBX		
+	jz tookCornerExit
+	
+	jmp HalChkCornerExit
+	
+	tookCornerExit:
+	mov [currentMove],EDX
+	call parseMove
+	mov EAX,1
+	ret
+
+	HalChkCornerExit:
+	mov EAX,0
+	ret
+
+	
+
+
+
+	HalChkSide:
+	xor EBX,EBX		;Have our cmp value ready
+	xor EDX,EDX
+	
+	mov EAX,[midleft]
+	mov EDX,4		;9 is opposite of top left
+	cmp EAX,EBX		;Compare topleft to playerid
+	jz tookSideExit
+
+	mov EAX,[midright]
+	mov EDX,6		;7 is opposite of top right
+	cmp EAX,EBX		
+	jz tookSideExit
+
+	mov EAX,[bottommid]
+	mov EDX,8		;3 is opposite of bottom left
+	cmp EAX,EBX		
+	jz tookSideExit
+
+	mov EAX,[topmid]
+	mov EDX,2		;1 is opposite of bottom right
+	cmp EAX,EBX		
+	
+	jz tookSideExit
+	
+	jmp HalChkSideExit
+	tookSideExit:
+	mov [currentMove],EDX
+	call parseMove
+	mov EAX,1
+	ret
+
+	HalChkSideExit:
+	mov EAX,0
+	ret
+
+
+
+
+
+
+
 
 	;This is our Easy Peasy mode AI
 	;Basically if somewhere if our logic we don't know what to do, just do this
@@ -333,7 +702,7 @@ main:
 	call parseMove
 	
 	cmp EAX,0		;Let's see if we made a move
-	je xmoveHAL
+	je HalrandomMove
 	
 	ret
 	
@@ -485,6 +854,14 @@ main:
 	mov EAX,[tempslot]
 	mov [topmid],EAX
 
+	ret
+
+	finishBoardRotate:	;We call this after our AI has solved a spot early. We do this so our board is the original rotation
+	dec ECX
+	FBRLoop:
+	call rotateBoard
+	dec ECX
+	jg FBRLoop		;HEY!!!! Weird glitch, using Loop instead of dec and jg caused a huge bug where it took 30 seconds to compute this
 	ret
 
 	resetBoard:		;Resets all slots to 0
