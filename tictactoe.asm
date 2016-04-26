@@ -44,6 +44,7 @@ SECTION .data
 	bottomleft:	times 4 db 0
 	bottommid:	times 4 db 0
 	bottomright:	times 4 db 0
+	tempslot	times 4 db 0			;Reserved for slot manipulation
 	;Misc
 	limit:		dd 2				;We mod random with this to pick who goes first
 	easymodelimit	dd 9
@@ -55,6 +56,10 @@ SECTION .data
 	playerWins	times 4 db 0
 	HalWin		times 4 db 0
 	return		times 4 db 0			;At this point im abusing the times stuff, but so far it has solved some bugs for me
+	playerid	times 4 db 0
+	HalID		times 4 db 0
+	playerwinamt	times 4 db 0			;These are for the checkwin function, they will go between 3 and -3
+	Halwinamt	times 4 db 0
 	;Escape Sequences
 	clearscr:	db 27,'[H',27,'[2J',0;		;PrintF this to clear the screen between draws
 	;Background Colors
@@ -103,14 +108,17 @@ main:
 	call printf		;Print to screen
 	add esp,8		;Move stack pointer
 	
-	call pickPlayer		;Let's pick who goes first
 	call loopGame		;Let's play until someone wins
 
 	jmp Exit		;Exit our program
 ;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-	
+
+
+
+;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	loopGame:
+	call pickPlayer		;Let's pick who goes first
 	loopGameLoop:		;Loop until someone wins
 		call playTurn	;Play current players turn
 		call drawBoard	;Draw updated board
@@ -183,12 +191,18 @@ main:
 
 	checkWinExit:
 	ret
+;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+
+
+
+;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;Checks which player won
 	chkPlayerWin:
-	cmp EAX,3
+	cmp EAX,[playerwinamt]
 	jz playerWon		;Check if our math worked and player won
 	chkHalWin:
-	cmp EAX,-3
+	cmp EAX,[Halwinamt]
 	jz HalWon		;Check if math worked and Hal won
 	mov EAX,0		;Noone won so put 0 in EAX so our earlier loop knows
 	ret
@@ -216,13 +230,21 @@ main:
 	call printf
 	add esp,8
 	ret
+;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+
+
+
+
+;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;A group of game logic (starting the game, playing turns, player moves, etc
+;Also probably the largest chuck of functions in the code
 
 	startGame:			;Starts our game of tictactoe
 	call resetBoard			;Get our game ready
-	mov EAX,[random]		;Set who goes first
-	mov [currentPlayer],EAX
-	
-
+	;mov EAX,[random]		;Set who goes first
+	;mov [currentPlayer],EAX
 	ret
 
 	printcurplayer:
@@ -234,44 +256,48 @@ main:
 	ret
 
 	playTurn:
+	cmp dword [playerid],0
+	jg playTurnPlayerX			;If playerid is bigger than 0(1 for X) jump somehwere else
+	
 	cmp dword [currentPlayer],0		;Compare who should go with 0 to jump to said players turn
+	jl xmoveHuman				;So if the current player ID is smaller than 0 than human turn
+	call xmoveHAL
+	
+	jmp playTurnExit
+	
+	playTurnPlayerX:
+	cmp dword [currentPlayer],0
 	jg xmoveHuman
 	call xmoveHAL
 
-	push bef
-	push strfmt
-	call printf
-	add esp,8
-	call printcurplayer
-
-	xor EAX,EAX
-	mov EAX,[currentPlayer]
-	cbw
-	cwd
-	add EAX,2
-	mov [currentPlayer],EAX
-	
-	push aft
-	push strfmt
-	call printf
-	add esp,8
-	call printcurplayer
-
-
+	;xor EAX,EAX
+	;mov EAX,[currentPlayer]
+	;cbw
+	;cwd
+	;add EAX,2
+	;mov [currentPlayer],EAX
+	playTurnExit:
+	mov EAX,[playerid]
+	mov [currentPlayer],EAX	
 
 	ret
 
 	xmoveHuman:		
 	call xmovePlayer
 	playerMakeMove:
+	mov EAX,[playerid]
+	mov [currentPlayer],EAX
 	call parseMove
 	cmp EAX,0
 	je xmovePlayer
 	
-	xor EAX,EAX
-	mov EAX,[currentPlayer]
-	sub EAX,2
+	;xor EAX,EAX
+	;mov EAX,[currentPlayer]
+	;sub EAX,2
+	;mov [currentPlayer],EAX
+	mov EAX,[HalID]
 	mov [currentPlayer],EAX
+
 
 	ret
 	
@@ -302,16 +328,13 @@ main:
 	cwd
 	add EAX,1			;So we changed the byte to a doubleword and added one so 0 can't be an input
 	mov [currentMove],EAX	
+	mov EAX,[HalID]
+	mov [currentPlayer],EAX
 	call parseMove
 	
 	cmp EAX,0		;Let's see if we made a move
 	je xmoveHAL
 	
-;	push cpuname
-;	push strfmt
-;	call printf
-;	add esp,8
-;	call printcurplayer
 	ret
 	
 	xmovePlayer:
@@ -428,6 +451,42 @@ main:
 	mov EAX,0		;Move was not made, slot was full
 	ret	
 
+	
+	rotateBoard:		;Rotates our tictactoe board 90 degrees
+	;Corners
+	mov EAX,[topleft]
+	mov [tempslot],EAX
+
+	mov EAX,[bottomleft]
+	mov [topleft],EAX
+
+	mov EAX,[bottomright]
+	mov [bottomleft],EAX
+
+	mov EAX,[topright]
+	mov [bottomright],EAX
+
+	mov EAX,[tempslot]
+	mov [topright],EAX
+
+	;Sides
+	mov EAX,[midleft]
+	mov [tempslot],EAX
+
+	mov EAX,[bottommid]
+	mov [midleft],EAX
+
+	mov EAX,[midright]
+	mov [bottommid],EAX
+
+	mov EAX,[topmid]
+	mov [midright],EAX
+
+	mov EAX,[tempslot]
+	mov [topmid],EAX
+
+	ret
+
 	resetBoard:		;Resets all slots to 0
 	mov EAX,clearReg
 	mov [topleft],EAX
@@ -442,7 +501,11 @@ main:
 	mov [bottommid],EAX
 	mov [bottomright],EAX
 	ret
+;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+
+;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;Drawing funcions
 
 	clearScreen:		;Will clear the screen of everything
 	push dword clearscr
@@ -611,7 +674,7 @@ main:
 	call printf
 	add esp,8
 	ret
-
+;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	pickPlayer:		;Randomly picks who will go first(Value is stored in random)
 	xor EAX,EAX
@@ -632,16 +695,34 @@ main:
 	mov EBX,[limit]         ;Move 2 to EBX
         xor EDX,EDX             ;Clear out EDX
         div EBX                 ;Divide EAX by EBX remainder stored in EDX
-	mov EAX,EDX		;Store random result in random (0 = cpu, 1 = human)
+	mov EAX,EDX		;Store random result in random (0 = cpu goes first, 1 = human goes first
 	
 	cmp EAX,0		;Except our moveparser is going to use -1 for cpu and 1 for human so we need to change it
 	jz pickPlayerCPU
+	
+	mov EAX,1		;Move 1 into playerid for X and -1 into HalID for O and set current player to 1(player)
+	mov [playerid],EAX
 	mov [currentPlayer],EAX
+	mov EAX,-1
+	mov [HalID],EAX
+	
+	mov EAX,3		;Move the correct amount into playerwinamt and Halwinamt that they will need for the check win function
+	mov [playerwinamt],EAX
+	mov EAX,-3
+	mov [Halwinamt],EAX
 	ret
 
 	pickPlayerCPU:
-	sub EAX,1
+	mov EAX,1		;Move 1(X) into HalID so Hal is X and -1 into playerid so player is O and set current player to -1(Hal)
+	mov [HalID],EAX
+	mov EAX,-1
+	mov [playerid],EAX
 	mov [currentPlayer],EAX
+	
+	mov EAX,-3		;Move the correct amount into playerwinamt and Halwinamt that they will need for the check win function
+	mov [playerwinamt],EAX
+	mov EAX,3
+	mov [Halwinamt],EAX
 	ret
 
 	redback:		;Changes the cursor background to red
