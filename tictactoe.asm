@@ -457,10 +457,42 @@ main:
 		add EAX,[topright]
 		mov EDX,dword 1
 		cmp EAX,EBX		;Check if those slots are taken
-		jnz HalChkWinDone
+		jnz HalChkWin10
 		mov EAX,[topleft]	;Let's see if our last spot is open or not(else we'll make the same move)
 		cmp EAX,0
 		jz HalChkWinExit
+
+	HalChkWin10:
+		mov EAX,[topmid]	;Slot 2 + Slot 8
+		add EAX,[bottommid]
+		mov EDX,dword 5
+		cmp EAX,EBX		;Check if those slots are taken
+		jnz HalChkWin11
+		mov EAX,[midmid]	;Let's see if our last spot is open or not(else we'll make the same move)
+		cmp EAX,0
+		jz HalChkWinExit
+
+	HalChkWin11:
+		mov EAX,[topmid]	;Slot 2 + Slot 5
+		add EAX,[midmid]
+		mov EDX,dword 8
+		cmp EAX,EBX		;Check if those slots are taken
+		jnz HalChkWin12
+		mov EAX,[bottommid]	;Let's see if our last spot is open or not(else we'll make the same move)
+		cmp EAX,0
+		jz HalChkWinExit
+
+	HalChkWin12:
+		mov EAX,[midmid]	;Slot 5 + Slot 8
+		add EAX,[bottommid]
+		mov EDX,dword 2
+		cmp EAX,EBX		;Check if those slots are taken
+		jnz HalChkWinDone
+		mov EAX,[topmid]	;Let's see if our last spot is open or not(else we'll make the same move)
+		cmp EAX,0
+		jz HalChkWinExit
+
+
 
 	HalChkWinDone:
 
@@ -575,10 +607,42 @@ main:
 		add EAX,[topright]
 		mov EDX,1
 		cmp EAX,EBX		;Check if those slots are taken
-		jnz HalChkBlockWinDone
+		jnz HalChkBlockWin10
 		mov EAX,[topleft]	;Let's see if our last spot is open or not(else we'll make the same move)
 		cmp EAX,0
 		jz HalChkBlockWinExit
+
+	HalChkBlockWin10:
+		mov EAX,[topmid]	;Slot 2 + Slot 8
+		add EAX,[bottommid]
+		mov EDX,5
+		cmp EAX,EBX		;Check if those slots are taken
+		jnz HalChkBlockWin11
+		mov EAX,[midmid]	;Let's see if our last spot is open or not(else we'll make the same move)
+		cmp EAX,0
+		jz HalChkBlockWinExit
+
+	HalChkBlockWin11:
+		mov EAX,[topmid]	;Slot 2 + Slot 5
+		add EAX,[midmid]
+		mov EDX,8
+		cmp EAX,EBX		;Check if those slots are taken
+		jnz HalChkBlockWin12
+		mov EAX,[bottommid]	;Let's see if our last spot is open or not(else we'll make the same move)
+		cmp EAX,0
+		jz HalChkBlockWinExit
+
+	HalChkBlockWin12:
+		mov EAX,[midmid]	;Slot 5 + Slot 8
+		add EAX,[bottommid]
+		mov EDX,2
+		cmp EAX,EBX		;Check if those slots are taken
+		jnz HalChkBlockWinDone
+		mov EAX,[topmid]	;Let's see if our last spot is open or not(else we'll make the same move)
+		cmp EAX,0
+		jz HalChkBlockWinExit
+
+
 
 	HalChkBlockWinDone:
 
