@@ -295,62 +295,93 @@ main:
 	ret
 	
 	xmoveHAL:		;This is utilizing the 8 steps to win TicTacToe on wikipedia
-		;push 101
-		;push what_step
-		;call printf
-		;add esp,8
+		push 100
+		push what_step
+		call printf
+		add esp,8
+	
+		call HalrandomMove
+		cmp EAX,0
+		ja xmoveHalExit
+
+		push 101
+		push what_step
+		call printf
+		add esp,8
 	
 		call HalChkWin
 		cmp EAX,0
 		ja xmoveHalExit
 		
 	
-		;push 102
-		;push what_step
-		;call printf
-		;add esp,8
+		push 102
+		push what_step
+		call printf
+		add esp,8
 
 		call HalChkBlockWin
 		cmp EAX,0
 		ja xmoveHalExit
+		
+		push 103
+		push what_step
+		call printf
+		add esp,8
+	
+		call HalChkFork
+		cmp EAX,0
+		ja xmoveHalExit
 
-		;call HalChkCenter
-		;cmp EAX,0
-		;ja xmoveHalExit
+		push 104
+		push what_step
+		call printf
+		add esp,8
 
-		;push 103
-		;push what_step
-		;call printf
-		;add esp,8
+		call HalChkBlockFork
+		cmp EAX,0
+		ja xmoveHalExit
+
+		push 105
+		push what_step
+		call printf
+		add esp,8
+
+		call HalChkCenter
+		cmp EAX,0
+		ja xmoveHalExit
+
+		push 106
+		push what_step
+		call printf
+		add esp,8
 	
 		call HalChkOpCorner
 		cmp EAX,0
 		ja xmoveHalExit
 
-		;push 104
-		;push what_step
-		;call printf
-		;add esp,8
+		push 107
+		push what_step
+		call printf
+		add esp,8
 
 		call HalChkCorner
 		cmp EAX,0
 		ja xmoveHalExit
 
-		;push 105
-		;push what_step
-		;call printf
-		;add esp,8
+		push 108
+		push what_step
+		call printf
+		add esp,8
 
 		call HalChkSide
 		cmp EAX,0
 		ja xmoveHalExit
 
-		;push 106
-		;push what_step
-		;call printf
-		;add esp,8
+		push 106
+		push what_step
+		call printf
+		add esp,8
 
-		call HalrandomMove
 	xmoveHalExit:
 	ret
 	
@@ -373,6 +404,7 @@ main:
 	HalChkWinLoop:
 		
 
+		call CWLdebug
 		mov EAX,[topleft]	;Slot 1 + Slot 2
 		add EAX,[topmid]
 		mov EDX,dword 3
@@ -498,8 +530,7 @@ main:
 
 		dec ECX
 		call rotateBoard
-		jg HalChkWinLoop
-		ja  HalChkWinLoop	;Rotate and check again
+		jg HalChkWinLoop	;Rotate and check again
 	
 		jmp HalChkWinNoMoveExit	;Couldnt find a move so just exit
 
@@ -522,7 +553,7 @@ main:
 		mov ECX,4		;For our rotation
 	
 	HalChkBlockWinLoop:
-
+		call CWLdebug
 		mov EAX,[topleft]	;Slot 1 + Slot 2
 		add EAX,[topmid]
 		mov EDX,3
@@ -648,7 +679,7 @@ main:
 
 		call rotateBoard
 		dec ECX
-		ja  HalChkBlockWinLoop	;Rotate and check again
+		jg  HalChkBlockWinLoop	;Rotate and check again
 	
 		jmp HalChkBlockWinNoMoveExit	;Couldnt find a move so just exit
 
@@ -663,6 +694,140 @@ main:
 		call finishBoardRotate
 		mov EAX,0		;Return 0
 	ret
+
+	
+
+
+
+
+
+	HalChkFork:
+		mov EBX,[HalID]	;Have our cmp value ready
+		mov ECX,[clearReg]	;0 in ECX
+
+		mov EAX,[topleft]
+		mov EDX,9		;9 is opposite of top left
+		cmp EAX,EBX		;Compare topleft to playerid
+		jnz HalChkFork2
+		mov EAX,[bottomright]
+		cmp EAX,ECX		;Compare opposite slot to 0
+		jz tookForkExit
+	
+	HalChkFork2:
+		mov EAX,[topright]
+		mov EDX,7		;7 is opposite of top right
+		cmp EAX,EBX		
+		jnz HalChkFork3
+		mov EAX,[bottomleft]
+		cmp EAX,ECX		;Compare opposite slot to 0
+		jz tookForkExit
+	
+
+	HalChkFork3:
+		mov EAX,[bottomleft]
+		mov EDX,3		;3 is opposite of bottom left
+		cmp EAX,EBX		
+		jnz HalChkFork4
+		mov EAX,[topright]
+		cmp EAX,ECX		;Compare opposite slot to 0
+		jz tookForkExit
+	
+
+	HalChkFork4:
+		mov EAX,[bottomright]
+		mov EDX,1		;1 is opposite of bottom right
+		cmp EAX,EBX		
+		jnz HalChkForkExit
+		mov EAX,[topleft]
+		cmp EAX,ECX		;Compare opposite slot to 0
+		jz tookForkExit
+	
+	jmp HalChkForkExit
+	
+	tookForkExit:
+		mov [currentMove],EDX
+		call parseMove
+		mov EAX,1
+	ret
+
+	HalChkForkExit:
+		mov EAX,0
+	ret
+
+	HalChkBlockFork:
+		mov EBX,[playerid]	;We're checking for 2 slots, each slot of ours will have the players ID. Therefore,
+		add EBX,[playerid]
+	
+	HalChkBlockForkLoop:
+		mov EAX,[midleft]	;Slot 4 + Slot 2
+		add EAX,[topmid]
+		mov EDX,1
+		cmp EAX,EBX		;Check if those slots are taken
+		jnz HalChkBlockFork2
+		mov EAX,[topleft]	;Let's see if our last spot is open or not(else we'll make the same move)
+		cmp EAX,0
+		jz HalChkBlockForkExit
+
+	HalChkBlockFork2:
+		mov EAX,[bottomleft]	;Slot 7 + Slot 3
+		add EAX,[topright]
+		cmp EAX,EBX		;Check if those slots are taken
+		jnz HalChkBlockFork3
+		call HalChkSide		;This is really all we can do to block a fork that's on the corners, not sides
+		cmp EAX,0
+		jz HalChkBlockForkExit
+
+	HalChkBlockFork3:
+		mov EAX,[bottommid]	;Slot 8 + Slot 6
+		add EAX,[midright]
+		mov EDX,9
+		cmp EAX,EBX		;Check if those slots are taken
+		jnz HalChkBlockFork4
+		mov EAX,[bottomright]	;Let's see if our last spot is open or not(else we'll make the same move)
+		cmp EAX,0
+		jz HalChkBlockForkExit
+
+	HalChkBlockFork4:
+		mov EAX,[midleft]	;Slot 4 + Slot 8
+		add EAX,[bottommid]
+		mov EDX,7
+		cmp EAX,EBX		;Check if those slots are taken
+		jnz HalChkBlockFork5
+		mov EAX,[bottomleft]	;Let's see if our last spot is open or not(else we'll make the same move)
+		cmp EAX,0
+		jz HalChkBlockForkExit
+
+	HalChkBlockFork5:
+		mov EAX,[topleft]	;Slot 1 + Slot 9
+		add EAX,[bottomright]
+		cmp EAX,EBX		;Check if those slots are taken
+		jnz HalChkBlockFork6
+		call HalChkSide
+		cmp EAX,0
+		jz HalChkBlockForkExit
+
+	HalChkBlockFork6:
+		mov EAX,[topmid]	;Slot 2 + Slot 6
+		add EAX,[midright]
+		mov EDX,3
+		cmp EAX,EBX		;Check if those slots are taken
+		jnz HalChkBlockForkNoMoveExit
+		mov EAX,[topright]	;Let's see if our last spot is open or not(else we'll make the same move)
+		cmp EAX,0
+		jz HalChkForkExit
+
+		jmp HalChkBlockForkNoMoveExit
+	HalChkBlockForkExit:
+		mov [currentMove],EDX	;Let's make our move
+		call parseMove		
+		mov EAX,1		;Return 1
+	ret
+
+	HalChkBlockForkNoMoveExit:
+		mov EAX,0		;Return 0
+	ret
+
+
 
 	HalChkCenter:
 		mov EAX,[midmid]	;Pull Center value into EAX
@@ -690,7 +855,6 @@ main:
 		jz tookOpCornerExit
 	
 	HalChkOpCorner2:
-	
 		mov EAX,[topright]
 		mov EDX,7		;7 is opposite of top right
 		cmp EAX,EBX		
@@ -701,7 +865,6 @@ main:
 	
 
 	HalChkOpCorner3:
-	
 		mov EAX,[bottomleft]
 		mov EDX,3		;3 is opposite of bottom left
 		cmp EAX,EBX		
@@ -712,7 +875,6 @@ main:
 	
 
 	HalChkOpCorner4:
-	
 		mov EAX,[bottomright]
 		mov EDX,1		;1 is opposite of bottom right
 		cmp EAX,EBX		
@@ -825,6 +987,47 @@ main:
 	;Basically if somewhere if our logic we don't know what to do, just do this
 	;It works pretty well
 	HalrandomMove:
+		mov EAX,[topleft]
+		cmp EAX,0
+		jnz HalNotFirstTurn
+	chkHRM1:
+		mov EAX,[topmid]
+		cmp EAX,0
+		jnz HalNotFirstTurn
+	chkHRM2:
+		mov EAX,[topright]
+		cmp EAX,0
+		jnz HalNotFirstTurn
+	chkHRM3:
+		mov EAX,[midleft]
+		cmp EAX,0
+		jnz HalNotFirstTurn
+	chkHRM4:
+		mov EAX,[midmid]
+		cmp EAX,0
+		jnz HalNotFirstTurn
+	chkHRM5:
+		mov EAX,[midright]
+		cmp EAX,0
+		jnz HalNotFirstTurn
+	chkHRM6:
+		mov EAX,[bottomleft]
+		cmp EAX,0
+		jnz HalNotFirstTurn
+	chkHRM7:
+		mov EAX,[bottommid]
+		cmp EAX,0
+		jnz HalNotFirstTurn
+	chkHRM8:
+		mov EAX,[bottomright]
+		cmp EAX,0
+		jnz HalNotFirstTurn
+	chkHRM9:
+		jz HalMakeRandomMove
+	HalNotFirstTurn:
+		mov EAX,0		;We didn't make a move
+	ret
+	HalMakeRandomMove:
 		push 0                  ;Push 0 for default time
         	call time               ;Seed random and generate number
         	add esp,4               ;Move stack pointer
@@ -851,6 +1054,7 @@ main:
 	
 		cmp EAX,0		;Let's see if we made a move
 		je HalrandomMove
+		mov EAX,1		;We made a move
 	ret
 	
 	xmovePlayer:
@@ -1240,9 +1444,10 @@ main:
 	pickPlayerCPU:
 		mov EAX,1		;Move 1(X) into HalID so Hal is X and -1 into playerid so player is O and set current player to -1(Hal)
 		mov [HalID],EAX
+		mov [currentPlayer],EAX
 		mov EAX,-1
 		mov [playerid],EAX
-		mov [currentPlayer],EAX
+		;mov [currentPlayer],EAX
 	
 		mov EAX,-3		;Move the correct amount into playerwinamt and Halwinamt that they will need for the check win function
 		mov [playerwinamt],EAX
