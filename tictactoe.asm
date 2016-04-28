@@ -124,9 +124,11 @@ main:
 	loopGame:
 		call pickPlayer		;Let's pick who goes first
 	loopGameLoop:			;Loop until someone wins
+		call drawBoard
 		call playTurn		;Play current players turn
+		call clearScreen
 		call drawBoard		;Draw updated board
-		call printnewline
+		call clearScreen
 		call checkWin		;Check if someone won, if not then keep looping
 		cmp EAX,0
 		jz loopGameLoop
