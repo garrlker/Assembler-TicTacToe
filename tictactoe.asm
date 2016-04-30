@@ -1,5 +1,5 @@
 ;Authors: Garrett Walker - David Hudson
-;Date Started: April/4/2016
+;Dsadte Started: April/4/2016
 ;To Compile
 ;nasm -f elf32 tictactoe.asm && gcc -m32 -o tictactoe tictactoe.o
 ;Or use the make file - That is easier
@@ -19,8 +19,14 @@ SECTION .data
 	shittalk:	db "Hello, %s, prepare to lose!", 10, 0
 	playerwins:	db "%s wins the game!",10,0
 	halwins:	db "HAHA!",10,"You lose, %s!",10,0
-	menu:		db "Player vs Hal(1) or Player vs Player(2)",0
+	menu:		db "Play(1) Help(2) or Exit(3)?",0
 	makemove:	db "Make a move sucka'?", 10, 0
+	endgame:	db "Play again? 1(Yes) 2(No)",10,0
+	noinput:	db "Make a wrong input there?",10,0
+	scores:		db "Wins:  %s-%d	Hal-%d		Draws-%d",10,0
+	percentages:	db "Win Percentages: %s-%d	Hal-%d		Draws-%d",10,0
+	turnprompt	db "Hal is thinking...",10,0
+	drawprompt	db "Draw!",10,0
 	;Formats
 	strfmt:		db '%s',0
 	intfmt:		db '%d',0
@@ -36,6 +42,8 @@ SECTION .data
 	oRow1:		db 218,196,196,191,0		;Top row of O
 	oRow2:		db 192,196,196,217,0		;Bottom row of O
 	nothing:	db "    ",0			;Incase nothing on that slot of board
+	;Help TicTacToe Grid
+	helpboard:	db 49,179,50,179,51,10,196,196,196,196,196,10,52,179,53,179,54,10,196,196,196,196,10,55,179,56,179,57,10,0
 	;0 For nothing | 1 for X | -1 for O
 	topleft:	times 4 db 0			;Our player(s) and CPU should change these values
 	topmid:		times 4 db 0
@@ -62,6 +70,10 @@ SECTION .data
 	HalID:		times 4 db 0
 	playerwinamt:	times 4 db 0			;These are for the checkwin function, they will go between 3 and -3
 	Halwinamt:	times 4 db 0
+	drawamt:	times 4 db 0
+	HalPercentage	times 4 db 0
+	humanPercentage	times 4 db 0
+	drawPercentage	times 4 db 0
 	temp_step:	times 4 db 0
 	;Escape Sequences
 	clearscr:	db 27,'[H',27,'[2J',0;		;PrintF this to clear the screen between draws
@@ -80,8 +92,7 @@ SECTION .bss
 	name		resb	20			;Reserve memory for user's name
 	terminal	resb	9 			;One byte for each board position, (0=empty,1=Human,2=CPU)
 	random  	resw	1			;Memory for our random value, who goes first
-	;currentPlayer	resw	1			;Who currently goes first
-	;currentMove	resw	1			;Players current move
+	menuinput	resw	1			;Will get a 4byte integer for menu input
 ;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 SECTION .text
 
@@ -92,11 +103,13 @@ main:
 	mov [random],EAX
 	mov [currentPlayer],EAX
 	mov [currentMove],EAX
-	;Dunno if it works, will delete if it doesnt
+	mov [playerWins],EAX
+	mov [HalWin],EAX
+	mov [drawamt],EAX
 
 	call clearScreen	;Clear screen
 	call grnfont
-	push dword greetings	;Push our message
+	push dword greetings 	;Push our message
 	call printf		;Print it
 	add esp,4
 	
@@ -107,12 +120,7 @@ main:
 
 	call clearScreen
 
-	push name		;Push user's name
-	push dword shittalk	;Let's shittalk
-	call printf		;Print to screen
-	add esp,8		;Move stack pointer
-	
-	call loopGame		;Let's play until someone wins
+	call menuloop		;Handles menu and game logic
 
 	jmp Exit		;Exit our program
 ;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -121,17 +129,136 @@ main:
 
 
 ;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	
+	calcPercentage:
+		mov EBX,HalWin			;Get the total number of turns
+		add EBX,playerWins
+		add EBX,drawamt
+		mov EAX,clearReg
+		add EAX,100
+		div EBX
+		mov ECX,EAX
+		
+		mov EAX,[HalWin]
+		imul ECX
+		mov [HalPercentage],EAX
+
+		push dword [HalPercentage]
+		push intfmt
+		call printf
+		add esp,8
+
+		mov EAX,[playerWins]
+		mul ECX
+		mov [humanPercentage],EAX
+	
+		mov EAX,[HalWin]
+		mul ECX
+		mov [drawPercentage],EAX
+	
+		push dword [drawPercentage]
+		push intfmt
+		call printf
+		add esp,8
+
+	ret
+
+	delay:
+		push 0                  ;Push 0 for default time
+        	call time               ;Seed random and generate number
+        	add esp,4               ;Move stack pointer; time is in EAX
+		mov EBX,EAX
+	delayLoop:
+		push 0
+		call time
+		add esp,4
+		cmp EAX,EBX
+		jz delayLoop
+	ret
+
+	menuloop:
+		call clearScreen
+		push name
+		push menu
+		call printf
+		add esp,8
+		
+		push menuinput
+		push intfmt
+		call scanf
+		add esp,8
+	
+		mov EAX,[menuinput]
+		cmp EAX,1		;Play
+		jz menuplay
+		cmp EAX,2		;Help
+		jz menuhelp
+		cmp EAX,3		;Exit
+	ret
+		push noinput
+		call printf
+		add esp,4
+		jmp menuloop
+
+	menuplay:
+		push name		;Push user's name
+		push dword shittalk	;Let's shittalk
+		call printf		;Print to screen
+		add esp,8		;Move stack pointer
+		call delay
+		call delay
+	menuplayGame:
+		call clearScreen
+		call loopGame
+		
+		mov EAX,[HalID]		;Have the ids swapped and ready incase of another game
+		mov EBX,[playerid]
+		mov [playerid],EAX
+		mov [HalID],EBX
+		push endgame
+		call printf
+		add esp,4
+		
+		push menuinput
+		push intfmt
+		call scanf
+		add esp,8
+
+		mov EAX,[menuinput]
+		cmp EAX,1
+		jz menuplayGame
+		ret
+	menuhelp:
+		push helpboard
+		call printf
+		add esp,4
+		xor EAX,EAX
+		mov [menuinput],EAX
+		call delay
+		call delay
+		call delay
+		jmp menuloop
+
 	loopGame:
+		call resetBoard
 		call pickPlayer		;Let's pick who goes first
 	loopGameLoop:			;Loop until someone wins
 		call drawBoard
 		call playTurn		;Play current players turn
 		call clearScreen
-		call drawBoard		;Draw updated board
-		call clearScreen
-		call checkWin		;Check if someone won, if not then keep looping
+		call checkDraw		;If no draw then check wins.
+		cmp EAX,0
+		jz noDraw
+		call delay
+		call delay
+	ret
+	
+	noDraw:
+		call checkWin
 		cmp EAX,0
 		jz loopGameLoop
+		call delay
+		call delay
 	ret
 	
 	checkWin:		;So neat way to check if they've won
@@ -198,6 +325,61 @@ main:
 
 	checkWinExit:
 	ret
+
+	checkDraw:			;If any slots are 0 then there isn't a draw yet
+		
+		mov EAX,[topleft]
+		cmp EAX,0
+		jz checkDrawSlotOpen
+		
+		mov EAX,[topmid]
+		cmp EAX,0
+		jz checkDrawSlotOpen
+	
+		mov EAX,[topright]
+		cmp EAX,0
+		jz checkDrawSlotOpen
+		
+		mov EAX,[midleft]
+		cmp EAX,0
+		jz checkDrawSlotOpen
+		
+		mov EAX,[midmid]
+		cmp EAX,0
+		jz checkDrawSlotOpen
+		
+		mov EAX,[midright]
+		cmp EAX,0
+		jz checkDrawSlotOpen
+		
+		mov EAX,[bottomleft]
+		cmp EAX,0
+		jz checkDrawSlotOpen
+		
+		mov EAX,[bottommid]
+		cmp EAX,0
+		jz checkDrawSlotOpen
+		
+		mov EAX,[bottomright]
+		cmp EAX,0
+		jz checkDrawSlotOpen
+			
+	CheckDrawExit:			;There is a draw and we will exit
+		mov EAX,[drawamt]
+		add EAX,1
+		mov [drawamt],EAX
+		mov EAX,1
+
+		call drawBoard
+		push drawprompt
+		call printf
+		add esp,8
+		
+		ret
+
+	checkDrawSlotOpen:		;Slot still open so don't do anything
+		mov EAX,0
+		ret
 ;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
@@ -214,16 +396,20 @@ main:
 		mov EAX,0		;Noone won so put 0 in EAX so our earlier loop knows
 	ret
 
-	playerWon:		;Add 1 to the amount of player wins
+	playerWon:			;Add 1 to the amount of player wins
 		mov EAX,[playerWins]
 		add EAX,1
 		mov [playerWins],EAX
 		mov EAX,1		;Let's our earlier loop know player won
 
+		call drawBoard
 		push name
 		push playerwins
 		call printf
 		add esp,8
+
+		call delay
+		call delay
 	ret
 
 	HalWon:			;Add 1 to the amount of Hal wins
@@ -232,10 +418,14 @@ main:
 		mov [HalWin],EAX
 		mov EAX,-1		;Let's our loop know Hal won
 	
+		call drawBoard
 		push name
 		push halwins
 		call printf
 		add esp,8
+
+		call delay
+		call delay
 	ret
 ;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -250,8 +440,7 @@ main:
 
 	startGame:			;Starts our game of tictactoe
 		call resetBoard			;Get our game ready
-		;mov EAX,[random]		;Set who goes first
-		;mov [currentPlayer],EAX
+		
 	ret
 
 	printcurplayer:
@@ -280,7 +469,14 @@ main:
 	playTurnExit:
 		mov EAX,[playerid]
 		mov [currentPlayer],EAX	
+		
+		push turnprompt
+		call printf
+		add esp,4
 
+		call delay
+		call delay
+		call drawBoard				;Drawboard and delay for 1 second
 	ret
 
 	xmoveHuman:		
@@ -297,92 +493,43 @@ main:
 	ret
 	
 	xmoveHAL:		;This is utilizing the 8 steps to win TicTacToe on wikipedia
-		push 100
-		push what_step
-		call printf
-		add esp,8
 	
 		call HalrandomMove
 		cmp EAX,0
 		ja xmoveHalExit
 
-		push 101
-		push what_step
-		call printf
-		add esp,8
-	
 		call HalChkWin
 		cmp EAX,0
 		ja xmoveHalExit
 		
-	
-		push 102
-		push what_step
-		call printf
-		add esp,8
-
 		call HalChkBlockWin
 		cmp EAX,0
 		ja xmoveHalExit
 		
-		push 103
-		push what_step
-		call printf
-		add esp,8
-	
 		call HalChkFork
 		cmp EAX,0
 		ja xmoveHalExit
-
-		push 104
-		push what_step
-		call printf
-		add esp,8
 
 		call HalChkBlockFork
 		cmp EAX,0
 		ja xmoveHalExit
 
-		push 105
-		push what_step
-		call printf
-		add esp,8
-
 		call HalChkCenter
 		cmp EAX,0
 		ja xmoveHalExit
 
-		push 106
-		push what_step
-		call printf
-		add esp,8
-	
 		call HalChkOpCorner
 		cmp EAX,0
 		ja xmoveHalExit
-
-		push 107
-		push what_step
-		call printf
-		add esp,8
 
 		call HalChkCorner
 		cmp EAX,0
 		ja xmoveHalExit
 
-		push 108
-		push what_step
-		call printf
-		add esp,8
-
 		call HalChkSide
 		cmp EAX,0
 		ja xmoveHalExit
 
-		push 106
-		push what_step
-		call printf
-		add esp,8
 
 	xmoveHalExit:
 	ret
@@ -406,7 +553,6 @@ main:
 	HalChkWinLoop:
 		
 
-		call CWLdebug
 		mov EAX,[topleft]	;Slot 1 + Slot 2
 		add EAX,[topmid]
 		mov EDX,dword 3
@@ -555,7 +701,6 @@ main:
 		mov ECX,4		;For our rotation
 	
 	HalChkBlockWinLoop:
-		call CWLdebug
 		mov EAX,[topleft]	;Slot 1 + Slot 2
 		add EAX,[topmid]
 		mov EDX,3
@@ -1219,7 +1364,7 @@ main:
 	ret
 
 	resetBoard:			;Resets all slots to 0
-		mov EAX,clearReg
+		xor EAX,EAX
 		mov [topleft],EAX
 		mov [topmid],EAX
 		mov [topright],EAX
@@ -1245,6 +1390,24 @@ main:
 	ret
 
 	drawBoard:			;PrintSlotTop and PrintSlopBottom are printing the top and bottom halfs of each slot based on the number in the given slot
+		push dword [drawamt]
+		push dword [HalWin]
+		push dword [playerWins]
+		push name
+		push scores
+		call printf
+		add esp,20
+	
+		;calcPercentage Function not working
+		;push dword [drawPercentage]
+		;push dword [HalPercentage]
+		;push dword [humanPercentage]
+		;push name
+		;push percentages
+		;call printf
+		;add esp,20
+
+
 		mov EAX,[topleft]	;Print each row one after another
 		call printslottop	;Top Left Slot
 		call printvertbord	
@@ -1484,4 +1647,5 @@ main:
 	
 	
 Exit:
+	call clearScreen	;One last clearscreen to exit gracefully
 	ret
