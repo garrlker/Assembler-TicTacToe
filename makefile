@@ -9,7 +9,7 @@
 TARGET  = tictactoe		#Output Name
 RMEXTS	= *.o			#Remove Extensions
 all: 
-	@nasm -f elf32 tictactoe.asm && gcc -m32 -o tictactoe tictactoe.o	#Compile Command
+	@nasm -f elf32  tictactoe.asm && gcc -m32 -o tictactoe tictactoe.o	#Compile Command
 	@echo "Probably Compiled"
 
 clean:

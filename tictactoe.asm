@@ -207,6 +207,7 @@ main:
 		add esp,8		;Move stack pointer
 		call delay
 		call delay
+		call pickPlayer		;Let's pick who goes first
 	menuplayGame:
 		call clearScreen
 		call loopGame
@@ -215,6 +216,14 @@ main:
 		mov EBX,[playerid]
 		mov [playerid],EAX
 		mov [HalID],EBX
+		
+		mov [currentPlayer],dword 1
+	
+		mov EAX,[playerwinamt]
+		mov EBX,[Halwinamt]
+		mov [playerwinamt],EBX
+		mov [Halwinamt],EAX
+		
 		push endgame
 		call printf
 		add esp,4
@@ -227,7 +236,7 @@ main:
 		mov EAX,[menuinput]
 		cmp EAX,1
 		jz menuplayGame
-		ret
+	ret
 	menuhelp:
 		push helpboard
 		call printf
@@ -241,7 +250,6 @@ main:
 
 	loopGame:
 		call resetBoard
-		call pickPlayer		;Let's pick who goes first
 	loopGameLoop:			;Loop until someone wins
 		call drawBoard
 		call playTurn		;Play current players turn
@@ -427,9 +435,7 @@ main:
 		call delay
 		call delay
 	ret
-;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
+;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~	
 
 
 
@@ -922,7 +928,7 @@ main:
 		jnz HalChkBlockFork3
 		call HalChkSide		;This is really all we can do to block a fork that's on the corners, not sides
 		cmp EAX,0
-		jz HalChkBlockForkExit
+		jg sidetookfork
 
 	HalChkBlockFork3:
 		mov EAX,[bottommid]	;Slot 8 + Slot 6
@@ -951,7 +957,7 @@ main:
 		jnz HalChkBlockFork6
 		call HalChkSide
 		cmp EAX,0
-		jz HalChkBlockForkExit
+		jg sidetookfork
 
 	HalChkBlockFork6:
 		mov EAX,[topmid]	;Slot 2 + Slot 6
@@ -964,10 +970,15 @@ main:
 		jz HalChkForkExit
 
 		jmp HalChkBlockForkNoMoveExit
+	
 	HalChkBlockForkExit:
 		mov [currentMove],EDX	;Let's make our move
 		call parseMove		
 		mov EAX,1		;Return 1
+	ret
+
+	sidetookfork:
+		mov EAX,1
 	ret
 
 	HalChkBlockForkNoMoveExit:
@@ -1649,3 +1660,4 @@ main:
 Exit:
 	call clearScreen	;One last clearscreen to exit gracefully
 	ret
+
